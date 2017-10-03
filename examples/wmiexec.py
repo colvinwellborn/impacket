@@ -134,9 +134,9 @@ class RemoteShell(cmd.Cmd):
  lcd {path}                 - changes the current local directory to {path}
  exit                       - terminates the server process (and this session)
  put {src_file, dst_path}   - uploads a local file to the dst_path (dst_path = default current directory)
- get {file}                 - downloads pathname to the current local dir 
+ get {file}                 - downloads pathname to the current local dir
  ! {cmd}                    - executes a local shell cmd
-""" 
+"""
 
     def do_lcd(self, s):
         if s == '':
@@ -208,7 +208,7 @@ class RemoteShell(cmd.Cmd):
         if len(line) == 2 and line[1] == ':':
             # Execute the command and see if the drive is valid
             self.execute_remote(line)
-            if len(self.__outputBuffer.strip('\r\n')) > 0: 
+            if len(self.__outputBuffer.strip('\r\n')) > 0:
                 # Something went wrong
                 print self.__outputBuffer
                 self.__outputBuffer = u''
@@ -246,15 +246,22 @@ class RemoteShell(cmd.Cmd):
                     # Output not finished, let's wait
                     time.sleep(1)
                     pass
+                elif str(e).find('STATUS_OBJECT_NAME_NOT_FOUND') >= 0:
+                    # Output file not yet created, wait
+                    time.sleep(1)
+                    pass
                 elif str(e).find('Broken') >= 0:
                     # The SMB Connection might have timed out, let's try reconnecting
                     logging.debug('Connection broken, trying to recreate it')
                     self.__transferClient.reconnect()
                     return self.get_output()
+                else:
+                    # Avoid infinite loops on fatal exceptions
+                    break
         self.__transferClient.deleteFile(self.__share, self.__output)
 
     def execute_remote(self, data):
-        command = self.__shell + data 
+        command = self.__shell + data
         if self.__noOutput is False:
             command += ' 1> ' + '\\\\127.0.0.1\\%s' % self.__share + self.__output  + ' 2>&1'
         self.__win32Process.Create(command.decode(sys.stdin.encoding), self.__pwd, None)
@@ -266,7 +273,7 @@ class RemoteShell(cmd.Cmd):
         self.__outputBuffer = u''
 
 class AuthFileSyntaxError(Exception):
-    
+
     '''raised by load_smbclient_auth_file if it encounters a syntax error
     while loading the smbclient-style authentication file.'''
 
@@ -274,7 +281,7 @@ class AuthFileSyntaxError(Exception):
         self.path=path
         self.lineno=lineno
         self.reason=reason
-    
+
     def __str__(self):
         return 'Syntax error in auth file %s line %d: %s' % (
             self.path, self.lineno, self.reason )
@@ -296,13 +303,13 @@ def load_smbclient_auth_file(path):
 
         if line.startswith('#') or line=='':
             continue
-            
+
         parts = line.split('=',1)
         if len(parts) != 2:
             raise AuthFileSyntaxError(path, lineno, 'No "=" present in line')
-        
+
         (k,v) = (parts[0].strip(), parts[1].strip())
-        
+
         if k=='username':
             username=v
         elif k=='password':
@@ -311,7 +318,7 @@ def load_smbclient_auth_file(path):
             domain=v
         else:
             raise AuthFileSyntaxError(path, lineno, 'Unknown option %s' % repr(k))
-            
+
     return (domain, username, password)
 
 # Process command-line arguments.
@@ -366,7 +373,7 @@ if __name__ == '__main__':
     if ' '.join(options.command) == ' ' and options.nooutput is True:
         logging.error("-nooutput switch and interactive shell not supported")
         sys.exit(1)
-    
+
     if options.debug is True:
         logging.getLogger().setLevel(logging.DEBUG)
     else:
@@ -386,7 +393,7 @@ if __name__ == '__main__':
         if options.A is not None:
             (domain, username, password) = load_smbclient_auth_file(options.A)
             logging.debug('loaded smbclient auth file: domain=%s, username=%s, password=%s' % (repr(domain), repr(username), repr(password)))
-        
+
         if domain is None:
             domain = ''
 
@@ -407,5 +414,5 @@ if __name__ == '__main__':
     except Exception, e:
         logging.error(str(e))
         sys.exit(1)
-        
+
     sys.exit(0)
