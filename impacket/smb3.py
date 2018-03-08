@@ -32,6 +32,7 @@ import string
 import struct
 from binascii import a2b_hex
 from contextlib import contextmanager
+from pyasn1.type.univ import noValue
 
 from impacket import nmb, ntlm, uuid, crypto, LOG
 from impacket.smb3structs import *
@@ -626,7 +627,7 @@ class SMB3:
         # (Section 5.5.1)
         encryptedEncodedAuthenticator = cipher.encrypt(sessionKey, 11, encodedAuthenticator, None)
 
-        apReq['authenticator'] = None
+        apReq['authenticator'] = noValue
         apReq['authenticator']['etype'] = cipher.enctype
         apReq['authenticator']['cipher'] = encryptedEncodedAuthenticator
 
@@ -800,6 +801,7 @@ class SMB3:
                 if packet.isValidAnswer(STATUS_SUCCESS):
                     sessionSetupResponse = SMB2SessionSetup_Response(packet['Data'])
                     self._Session['SessionFlags'] = sessionSetupResponse['SessionFlags']
+                    self._Session['SessionID']    = packet['SessionID']
 
                     # Calculate the key derivations for dialect 3.0
                     if self._Session['SigningRequired'] is True:
